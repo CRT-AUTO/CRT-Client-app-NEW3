@@ -17,10 +17,8 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState('account');
   const [error, setError] = useState<string | null>(null);
   const [authRetryCount, setAuthRetryCount] = useState(0);
-  const [fbConnecting, setFbConnecting] = useState(false);
   const [userEmail, setUserEmail] = useState<string>('');
   const [userSince, setUserSince] = useState<string>('');
-  const [fbDebugInfo, setFbDebugInfo] = useState<string[]>([]);
 
   useEffect(() => {
     async function loadData() {
@@ -107,129 +105,6 @@ export default function Settings() {
   
   const getInstagramConnection = () => {
     return socialConnections.find(conn => conn.ig_account_id);
-  };
-  
-  const addFbDebugInfo = (message: string) => {
-    console.log(`Facebook Connect: ${message}`);
-    setFbDebugInfo(prev => [...prev.slice(-9), message]);
-  };
-
-  const handleFacebookConnect = async () => {
-    setFbConnecting(true);
-    setError(null);
-    
-    try {
-      addFbDebugInfo("Starting Facebook connection process");
-      
-      // Check if FB SDK is properly loaded
-      const isSdkReady = isFacebookSDKReady();
-      addFbDebugInfo(`Facebook SDK status: ${isSdkReady ? 'Ready' : 'Not Ready'}`);
-      
-      if (!isSdkReady) {
-        // Wait for the SDK to initialize
-        addFbDebugInfo("Waiting for Facebook SDK to initialize...");
-        
-        try {
-          await waitForFacebookSDK(8000); // Increased timeout to 8 seconds
-          addFbDebugInfo("Facebook SDK initialized successfully");
-        } catch (sdkError) {
-          addFbDebugInfo(`SDK initialization failed: ${sdkError instanceof Error ? sdkError.message : 'Unknown error'}`);
-          // Fall back to direct OAuth flow
-          handleDirectOAuthFlow();
-          return;
-        }
-      }
-      
-      // Check login status now that we know SDK is ready
-      addFbDebugInfo("Checking Facebook login status");
-      const statusResponse = await checkFacebookLoginStatus();
-      
-      addFbDebugInfo(`Facebook status: ${statusResponse.status}`);
-      
-      // Check for 2FA error specifically
-      if (statusResponse.error && is2FAError(statusResponse)) {
-        addFbDebugInfo("Detected 2FA challenge, using direct OAuth flow with auth_type=rerequest");
-        handleDirectOAuthFlow(true); // Pass true to indicate 2FA scenario
-        return;
-      }
-      
-      if (statusResponse.status === 'connected' && statusResponse.authResponse) {
-        // User is already logged into Facebook and authorized the app
-        addFbDebugInfo("User already connected to Facebook, proceeding to page selection");
-        // The handleFacebookStatusChange function will handle the redirect
-        await loginWithFacebook();
-      } else if (statusResponse.status === 'error') {
-        // SDK error occurred, fall back to direct OAuth
-        addFbDebugInfo("Facebook SDK error, falling back to direct OAuth");
-        handleDirectOAuthFlow();
-      } else {
-        // User needs to log in or authorize the app
-        addFbDebugInfo(`Initiating login flow (status: ${statusResponse.status})`);
-        
-        const loginResponse = await loginWithFacebook();
-        
-        // Check for 2FA error in login response
-        if (loginResponse.error && is2FAError(loginResponse)) {
-          addFbDebugInfo("Detected 2FA challenge during login, using direct OAuth flow with auth_type=rerequest");
-          handleDirectOAuthFlow(true); // Pass true to indicate 2FA scenario
-          return;
-        }
-        
-        if (loginResponse.status === 'connected') {
-          addFbDebugInfo("Facebook login successful, redirect should happen automatically");
-        } else if (loginResponse.status === 'error') {
-          addFbDebugInfo("Error during Facebook login, falling back to direct OAuth");
-          handleDirectOAuthFlow();
-        } else {
-          addFbDebugInfo(`Facebook login was not successful: ${loginResponse.status}`);
-          throw new Error(`Facebook login failed: ${loginResponse.status}`);
-        }
-      }
-    } catch (err) {
-      console.error('Error connecting to Facebook:', err);
-      addFbDebugInfo(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      setError(err instanceof Error ? err.message : 'Failed to connect to Facebook');
-      
-      // Fall back to direct OAuth as a last resort
-      handleDirectOAuthFlow();
-    } finally {
-      setFbConnecting(false);
-    }
-  };
-
-  // Helper function for direct OAuth flow
-  const handleDirectOAuthFlow = async (is2FAFlow = false) => {
-    addFbDebugInfo(`Using direct OAuth flow${is2FAFlow ? ' (2FA mode)' : ''}`);
-    
-    // Save the current auth session in localStorage before redirecting
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        // Store a minimal version of the session to maintain auth state
-        localStorage.setItem('fb_auth_state', JSON.stringify({
-          userId: session.user.id,
-          expiresAt: session.expires_at,
-          timestamp: Date.now()
-        }));
-        addFbDebugInfo("Saved authentication state to localStorage");
-      }
-    } catch (sessionError) {
-      addFbDebugInfo(`Error saving auth state: ${sessionError instanceof Error ? sessionError.message : 'Unknown error'}`);
-    }
-    
-    // IMPORTANT: Use the fixed redirect URL that matches your Meta app configuration
-    const redirectUri = `https://crt-tech.org/oauth/facebook/callback`;
-    const appId = window.ENV?.META_APP_ID;
-    
-    if (!appId) {
-      throw new Error('Facebook App ID is missing in environment variables');
-    }
-    
-    // For 2FA flow, add auth_type=rerequest to trigger Facebook's 2FA handling
-    const authTypeParam = is2FAFlow ? '&auth_type=rerequest' : '';
-    
-    addFbDebugInfo(`Redirecting to Facebook OAuth URL with fixed redirect: ${redirectUri}`);
-    window.location.href = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=public_profile,email,pages_show_list,pages_messaging&response_type=code${authTypeParam}`;
   };
 
   const handleInstagramConnect = () => {
@@ -481,48 +356,34 @@ export default function Settings() {
                         onLoginSuccess={() => console.log('Facebook login successful')} 
                         onLoginFailure={(err) => {
                           setError(err);
-                          addFbDebugInfo(`Login failure: ${err}`);
                         }}
                         scope="public_profile,email,pages_show_list,pages_messaging"
                       />
                     </div>
                     
-                    <div className="text-center mt-3">
-                      <span className="inline-block border-t border-gray-300 w-full relative">
-                        <span className="px-2 bg-white relative -top-3 text-xs text-gray-500">or</span>
-                      </span>
-                    </div>
-                    
-                    <div className="mt-3 text-center">
-                      <button
-                        onClick={handleFacebookConnect}
-                        disabled={fbConnecting}
-                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                      >
-                        {fbConnecting ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                            Connecting...
-                          </>
-                        ) : (
-                          <>
-                            <Facebook className="h-5 w-5 mr-2" />
-                            Connect Manually
-                          </>
-                        )}
-                      </button>
-                    </div>
-                    
-                    {fbDebugInfo.length > 0 && (
-                      <div className="mt-4 p-3 bg-gray-50 rounded-md">
-                        <p className="text-xs text-gray-700 font-medium">Connection Status:</p>
-                        <div className="text-xs text-gray-600 mt-1 space-y-1">
-                          {fbDebugInfo.map((info, idx) => (
-                            <div key={idx} className="bg-white p-1 rounded">{info}</div>
-                          ))}
+                    <div className="mt-4 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                      <div className="flex">
+                        <div className="flex-shrink-0">
+                          <AlertTriangle className="h-5 w-5 text-yellow-400" />
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm text-yellow-700">
+                            Make sure your Facebook account has admin access to at least one Facebook Page.
+                            The Facebook account you use to log in must have permission to manage the page in Facebook Business Manager.
+                          </p>
+                          <p className="mt-2 text-sm">
+                            <a 
+                              href="https://www.facebook.com/pages/create" 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-yellow-700 font-medium underline"
+                            >
+                              Create a Facebook Page
+                            </a> if you don't have one yet.
+                          </p>
                         </div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 )}
               </div>
