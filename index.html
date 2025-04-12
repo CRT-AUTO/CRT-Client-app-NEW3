@@ -32,8 +32,8 @@
       window.process = window.process || {};
       window.process.env = window.process.env || {};
       // This script will be replaced by Vite during the build process
-      window.ENV.META_APP_ID = import.meta.env.VITE_META_APP_ID || "";
-      window.process.env.META_APP_ID = import.meta.env.VITE_META_APP_ID || "";
+      window.ENV.META_APP_ID = "%VITE_META_APP_ID%";
+      window.process.env.META_APP_ID = "%VITE_META_APP_ID%";
     </script>
   </head>
   <body>
