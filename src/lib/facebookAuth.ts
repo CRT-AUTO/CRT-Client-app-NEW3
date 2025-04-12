@@ -142,7 +142,7 @@ export function handleFacebookStatusChange(response: FacebookStatusResponse): Pr
         // Redirect to Facebook OAuth dialog with code response type
         // Code response type is required for server-side token exchange
         // IMPORTANT: Use the hardcoded redirect URL that matches your Meta app configuration
-        const appId = window.ENV.META_APP_ID || import.meta.env.VITE_META_APP_ID;
+        const appId = import.meta.env.VITE_META_APP_ID;
         const redirectUri = `https://crt-tech.org/oauth/facebook/callback`;
         
         if (!appId) {
@@ -188,7 +188,7 @@ export function handleFacebookStatusChange(response: FacebookStatusResponse): Pr
       }
       
       // Redirect to Facebook OAuth dialog
-      const appId = window.ENV.META_APP_ID || import.meta.env.VITE_META_APP_ID;
+      const appId = import.meta.env.VITE_META_APP_ID;
       const redirectUri = `https://crt-tech.org/oauth/facebook/callback`;
       
       if (!appId) {
@@ -219,7 +219,7 @@ export function handleFacebookStatusChange(response: FacebookStatusResponse): Pr
       }
       
       // Redirect to Facebook login
-      const appId = window.ENV.META_APP_ID || import.meta.env.VITE_META_APP_ID;
+      const appId = import.meta.env.VITE_META_APP_ID;
       const redirectUri = `https://crt-tech.org/oauth/facebook/callback`;
       
       if (!appId) {
@@ -281,7 +281,7 @@ export async function loginWithFacebook(scope: string = "public_profile,email,pa
     console.error('Error initiating Facebook login:', error);
     
     // If SDK isn't available, redirect directly to the OAuth flow
-    const appId = window.ENV.META_APP_ID || import.meta.env.VITE_META_APP_ID;
+    const appId = import.meta.env.VITE_META_APP_ID;
     const redirectUri = `https://crt-tech.org/oauth/facebook/callback`;
     
     if (!appId) {
