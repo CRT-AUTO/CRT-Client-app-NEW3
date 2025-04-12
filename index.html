@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Assistant Platform</title>
+    <meta name="description" content="AI Assistant Platform for social media management">
+    <!-- Force no caching during development -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <style>
+      /* Ensure Facebook button container is visible with correct dimensions */
+      .facebook-login-container {
+        min-height: 40px;
+        display: flex;
+        justify-content: center;
+        width: 100%;
+      }
+      .fb-login-button {
+        width: 100% !important;
+      }
+      .fb-login-button iframe {
+        width: 100% !important;
+      }
+    </style>
+    <!-- Make Vite env variables available globally before FB SDK loads -->
+    <script>
+      // Create a global window object to store environment variables
+      window.ENV = {};
+      window.process = window.process || {};
+      window.process.env = window.process.env || {};
+      // This script will be replaced by Vite during the build process
+      window.ENV.META_APP_ID = import.meta.env.VITE_META_APP_ID || "";
+      window.process.env.META_APP_ID = import.meta.env.VITE_META_APP_ID || "";
+    </script>
+  </head>
+  <body>
+    <!-- Facebook SDK root element -->
+    <div id="fb-root"></div>
+    
+    <!-- Facebook SDK initialization -->
+    <script>
+      window.fbAsyncInit = function() {
+        FB.init({
+          appId: window.ENV.META_APP_ID || window.process.env.META_APP_ID, // Use the global variable
+          cookie: true,
+          xfbml: true,
+          version: 'v18.0'
+        });
+          
+        FB.AppEvents.logPageView();
+        
+        // Add a flag to indicate Facebook SDK has been loaded
+        window.fbSDKLoaded = true;
+        
+        // Dispatch a custom event for components to listen for
+        window.dispatchEvent(new Event('fbSDKLoaded'));
+        
+        // Check if checkLoginState function is defined
+        if (typeof window.checkLoginState === 'function') {
+          // Wait for a short time before checking login status to ensure
+          // the SDK is fully initialized
+          setTimeout(() => {
+            window.checkLoginState();
+          }, 100);
+        }
+      };
+
+      (function(d, s, id){
+         var js, fjs = d.getElementsByTagName(s)[0];
+         if (d.getElementById(id)) {return;}
+         js = d.createElement(s); js.id = id;
+         js.src = "https://connect.facebook.net/en_US/sdk.js";
+         fjs.parentNode.insertBefore(js, fjs);
+       }(document, 'script', 'facebook-jssdk'));
+    </script>
+    
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
