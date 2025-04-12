@@ -16,7 +16,6 @@ declare global {
     FB: FacebookSDK;
     fbAsyncInit: () => void;
     fbSDKLoaded: boolean;
-    ENV: Record<string, string>;
   }
 }
 
@@ -50,8 +49,8 @@ export function initFacebookSDK(): Promise<void> {
     // Set up our own fbAsyncInit
     window.fbAsyncInit = function() {
       try {
-        // Get the app ID from the environment variables
-        const appId = window.ENV.META_APP_ID || import.meta.env.VITE_META_APP_ID;
+        // Get the app ID directly from the environment variables
+        const appId = import.meta.env.VITE_META_APP_ID || "";
         
         if (!appId) {
           console.error("Facebook App ID not found in environment variables");
